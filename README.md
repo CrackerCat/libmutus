@@ -11,3 +11,6 @@ stupid obfuscation library
 
 ## documentation
 no
+
+## known issues
+- reference types are fucky in unrolled expressions; use pointers instead
