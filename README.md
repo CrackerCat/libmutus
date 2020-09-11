@@ -7,7 +7,8 @@ stupid obfuscation library
 ## arithmetic
 - security through absurdity
 - reduce all operations to the bit level
-- causes MSVC to usually run out of heap space and causes clang to take obscene amounts of time but hey
+- causes MSVC to usually run out of heap space and causes clang to take obscene amounts of time
+- i'm not kidding, it takes a solid 5 minutes for clang to compile division
 
 ## documentation
 no
