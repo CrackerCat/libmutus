@@ -4,7 +4,4 @@
 #pragma once
 
 #include "../flow/unroll.hpp"
-
-#include "../math/add.hpp"
-#include "../math/mul.hpp"
-#include "../math/div.hpp"
+#include "../math/integer.hpp"

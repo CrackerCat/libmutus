@@ -7,70 +7,30 @@
 #include "../impl/util.hpp"
 
 namespace mutus {
-    // make the compiler a bit happier with some manual unrolling
     namespace impl {
-        template<int c, typename tfn, typename tchk, typename... cap>
+        template<int c, typename tfn, typename tchk>
         struct unroll_impl {
-            MUTUS_FORCEINLINE bool operator()(cap... args) {
-                constexpr auto fn = tfn{};
-                constexpr auto chk = tchk{};
-
-                if (!chk(args...))
+            template<typename... cap>
+            MUTUS_API bool operator()(cap... args) {
+                if (!tchk::go(args...))
                     return false;
 
-                fn(args...);
+                tfn::go(args...);
 
-                if constexpr (c > 0) {
-                    if (!chk(args...))
-                        return false;
-
-                    fn(args...);
-
-                    if constexpr (c > 1) {
-                        if (!chk(args...))
-                            return false;
-
-                        fn(args...);
-
-                        if constexpr (c > 2) {
-                            if (!chk(args...))
-                                return false;
-
-                            fn(args...);
-
-                            if constexpr (c > 3)
-                                return unroll_impl<c - 4, tfn, tchk, cap...>{}(args...);
-                            else
-                                return true;
-                        } else {
-                            return true;
-                        }
-                    } else {
-                        return true;
-                    }
-                } else {
+                if constexpr(c > 0)
+                    return unroll_impl<c - 1, tfn, tchk>{}(args...);
+                else
                     return true;
-                }
             }
         };
 
-        template<auto end, auto step, typename tfn, typename... cap>
+        template<auto end, auto step, typename tfor>
         struct unroll_for_impl {
-            template<auto cur>
-            static MUTUS_FORCEINLINE void go(cap... args) {
-                constexpr auto fn = tfn{};
+            template<auto cur, typename... cap>
+            static MUTUS_API void go(cap... args) {
                 if constexpr (step < 0 ? (cur > end) : (cur < end)) {
-                    fn(cur, args...);
-                    if constexpr (step < 0 ? ((cur + step) > end) : ((cur + step) < end)) {
-                        fn(cur + step, args...);
-                        if constexpr (step < 0 ? ((cur + step * 2) > end) : ((cur + step * 2) < end)) {
-                            fn(cur + step * 2, args...);
-                            if constexpr (step < 0 ? ((cur + step * 3) > end) : ((cur + step * 3) < end)) {
-                                fn(cur + step * 3, args...);
-                                unroll_for_impl<end, step, tfn, cap...>::template go<cur + step * 4>(args...);
-                            }
-                        }
-                    }
+                    tfor::template impl<cur>().template go(args...);
+                    unroll_for_impl<end, step, tfor>::template go<cur + step>(args...);
                 }
             }
         };
@@ -78,21 +38,37 @@ namespace mutus {
 
     template<typename tfn, typename tchk>
     struct unroll {
-        template<int c, typename... cap>
-        MUTUS_FORCEINLINE void go(cap... args) {
-            while (impl::unroll_impl<c, always_inline_invoker<tfn>,
-                    always_inline_invoker<tchk>, cap...>{}(args...));
+        template<auto c>
+        struct impl_unroll {
+            template<typename... cap>
+            MUTUS_API void go(cap... args) {
+                while (impl::unroll_impl<c, tfn, tchk>{}(args...));
+            }
+        };
+
+        template<auto c>
+        constexpr auto impl() const {
+            return impl_unroll<c>{};
         }
 
-        constexpr unroll(tfn fn, tchk chk) { }
+        constexpr unroll(tfn, tchk) { }
     };
 
     template<typename tfn>
     struct unroll_for {
-        template<auto start, auto end, auto step, typename... cap>
-        MUTUS_FORCEINLINE void go(cap... args) {
-            impl::unroll_for_impl<end, step, always_inline_invoker<tfn>, cap...>::template go<start>(args...);
+        template<auto start, auto end, auto step>
+        struct impl_for {
+            template<typename... cap>
+            MUTUS_API void go(cap... args) {
+                impl::unroll_for_impl<end, step, tfn>::template go<start>(args...);
+            }
+        };
+
+        template<auto start, auto end, auto step>
+        constexpr auto impl() const {
+            return impl_for<start, end, step>{};
         }
-        constexpr unroll_for(tfn fn) { }
+
+        constexpr unroll_for(tfn) { }
     };
 }
