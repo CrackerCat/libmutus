@@ -204,7 +204,8 @@ namespace mutus {
         }
 
         MUTUS_API bool operator>=(const integer& other) const {
-            return *this == other || *this > other;
+            // NO BRANCHES
+            return *this == other | *this > other;
         }
 
         // hooray for not needing to worry about floating point crap!!!!
