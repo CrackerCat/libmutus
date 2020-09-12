@@ -102,7 +102,7 @@ namespace mutus {
             struct shr_impl {
                 template<typename... cap>
                 MUTUS_API void go(const bool *a, bool *b, int off) {
-                    if (cur + off > n)
+                    if (cur + off >= n)
                         b[cur] = false;
                     else
                         b[cur] = a[cur + off];
@@ -158,14 +158,16 @@ namespace mutus {
             struct div_impl {
                 template<typename... cap>
                 MUTUS_API void go(const integer *a, const integer *b, integer *q, integer *r) {
-                    *q <<= 1;
                     *r <<= 1;
-                    r->data[0] |= (*a >> cur).data[0];
+                    r->data[0] |= a->data[cur];
 
-                    if (*r >= *b) {
-                        *r -= *b;
-                        q->data[0] = true;
-                    }
+                    const auto gt = *r >= *b;
+                    auto gtb = integer{0};
+                    gtb.data[0] = gt;
+                    gtb *= ~0ULL;
+
+                    *r -= (*b & gtb);
+                    q->data[cur] = gt;
                 }
             };
 
@@ -178,14 +180,15 @@ namespace mutus {
         MUTUS_API bool operator==(const integer& other) const {
             auto not_equal = false;
 
-            unroll_for _for{for_invoker{[](int cur, const integer *_this, const integer *_other, bool *eq) {
-                *eq |= _this->data[cur] ^ _other->data[cur];
+            unroll_for _for{for_invoker{[](int cur, const integer *_this, const integer *_other, bool *neq) {
+                *neq |= _this->data[cur] ^ _other->data[cur];
             }}};
             _for.template impl<0, n, 1>().go(this, &other, &not_equal);
 
             return !not_equal;
         }
 
+        // https://stackoverflow.com/questions/10096599/bitwise-operations-equivalent-of-greater-than-operator
         MUTUS_API bool operator>(const integer& other) const {
             auto i1 = ~*this & other;
             auto i2 = *this & ~other;
@@ -197,15 +200,7 @@ namespace mutus {
             i1 |= i1 >> 16;
             i1 |= i1 >> 32;
 
-            auto gt = i2 & ~i1;
-            gt |= gt >> 1;
-            gt |= gt >> 2;
-            gt |= gt >> 4;
-            gt |= gt >> 8;
-            gt |= gt >> 16;
-            gt |= gt >> 32;
-
-            return gt.data[0];
+            return (i2 & ~i1) != integer{0};
         }
 
         MUTUS_API bool operator>=(const integer& other) const {
@@ -290,20 +285,18 @@ namespace mutus {
             integer q{}, r{};
             unroll_for<div> _for{{}};
             _for.template impl<n - 1, -1, -1>().go(this, &b, &q, &r);
-            return r;
+            return q;
         }
 
         MUTUS_API integer& operator<<=(int ref) {
-            integer a1 = *this;
             unroll_for<shl> _for{{}};
-            _for.template impl<0, n, 1>().go(a1.data, this->data, ref);
+            _for.template impl<n, -1, -1>().go(this->data, this->data, ref);
             return *this;
         }
 
         MUTUS_API integer& operator>>=(int ref) {
-            integer a1 = *this;
             unroll_for<shr> _for{{}};
-            _for.template impl<0, n, 1>().go(a1.data, this->data, ref);
+            _for.template impl<0, n, 1>().go(this->data, this->data, ref);
             return *this;
         }
 
@@ -313,9 +306,20 @@ namespace mutus {
 
         MUTUS_API integer& operator+=(const integer& b) {
             integer a1 = *this;
+            *this = {};
+
             bool carry = false;
             unroll_for<add> _for{{}};
             _for.template impl<0, n, 1>().go(a1.data, b.data, this, &carry);
+            return *this;
+        }
+
+        MUTUS_API integer& operator*=(const integer& b) {
+            integer a1 = *this, b1 = b;
+            *this = {};
+
+            unroll_for<mul> _for{{}};
+            _for.template impl<0, n, 1>().go(&a1, &b1, this);
             return *this;
         }
 

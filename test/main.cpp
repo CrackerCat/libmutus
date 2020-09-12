@@ -2,30 +2,34 @@
 
 #include <mutus/impl/mutus.hpp>
 
+// compiling this file should give you an idea about how impractical this library is
+// would make for a real funny keygenme though :^)
+
 __attribute__((noinline, dllexport)) void test_math_impl(uint64_t a) {
     mutus::integer<64> i1{a};
-   //printf("%lld << 3 = %llx\n", a, (i1 << 3).as_uint64());
-   //printf("0xCCCCCCC >> 3 = %llx\n", (mutus::integer<64>{0xCCCCCCC} >> 3).as_uint64());
+    printf("%lld << 3 = %lld\n", a, (i1 << 3).as_uint64());
     printf("%lld * 0xCCCCCCC = %llx\n", a, (i1 * 0xCCCCCCC).as_uint64());
-    printf("%lld / 1 = %llx\n", a, (i1 / 1).as_uint64());
-    printf("%lld / 3 = %llx\n", a, (i1 / 3).as_uint64());
-    //printf("%lld + 0xCCCCCCC = %llx\n", a, (i1 + 0xCCCCCCC).as_uint64());
+    printf("%lld >= 100 = %hhu\n", a, i1 >= 100);
+    printf("%lld - 3 = %lld\n", a, i1.as_uint64());
+    printf("%lld / 3 = %lld\n", a, (i1 / 3).as_uint64());
+    printf("%lld + 0xCCCCCCC = %llx\n", a, (i1 + 0xCCCCCCC).as_uint64());
+    printf("%lld - 10 = %lld\n", a, (i1 - 10).as_uint64());
 }
 
 __attribute__((noinline)) void test_math() {
     volatile uint64_t a1 = 123, b1 = 456, c1 = 100, d1 = 10, e1 = 1;
 
+    printf("0xCCCCCCC >> 3 = %llx\n", (mutus::integer<64>{0xCCCCCCC} >> 3).as_uint64());
+    printf("1 | 2 = %llx\n", (mutus::integer<64>{1} | mutus::integer<64>{2}).as_uint64());
+    printf("1 & 2 = %llx\n", (mutus::integer<64>{1} & mutus::integer<64>{2}).as_uint64());
+    printf("1 > 2 = %hhu\n", mutus::integer<64>{1} > mutus::integer<64>{2});
+    printf("2 > 1 = %hhu\n", mutus::integer<64>{2} > mutus::integer<64>{1});
+
     test_math_impl(a1);
     test_math_impl(b1);
+    test_math_impl(c1);
     test_math_impl(d1);
     test_math_impl(e1);
-
-    //printf("123 * 456 = %d\n", mutus::bit_mul<1>(a, b));
-    //printf("123 * 456 = %d\n", mutus::bit_mul<4>(a, b));
-    //printf("123 * 0xCCCCCCC = %d\n", mutus::bit_mul<2>(a, 0xCCCCCCCULL));
-    //printf("123 * 0xCCCCCCC = %d\n", mutus::bit_mul<8>(a, 0xCCCCCCCULL));
-    //printf("100 / 10 = %d\n", mutus::bit_div(c, d));
-    //printf("100 / 3 = %d\n", mutus::bit_div(c, e));
 }
 
 __attribute__((noinline)) void test_unroll() {
