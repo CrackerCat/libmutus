@@ -19,7 +19,13 @@ namespace mutus {
             _for.template impl<0, n, 1>().go(this, &on);
         }
 
-        MUTUS_API integer() : integer(0ULL) {}
+        MUTUS_API integer() : data() {}
+
+        MUTUS_API static integer one() {
+            integer i{};
+            i.data[0] = true;
+            return i;
+        }
 
         MUTUS_API integer(const integer& other) : data{} {
             std::copy(other.data, other.data + n, data);
@@ -125,7 +131,7 @@ namespace mutus {
                     bool sum = a1 ^ b1 ^ *carry;
 
                     *carry = (a1 & b1) | (*carry & (a1 ^ b1));
-                    *c |= (sum ? integer{1} : integer{0}) << cur;
+                    *c |= (sum ? integer::one() : integer{}) << cur;
                 }
             };
 
@@ -159,14 +165,14 @@ namespace mutus {
                 template<typename... cap>
                 MUTUS_API void go(const integer *a, const integer *b, integer *q, integer *r) {
                     *r <<= 1;
-                    r->data[0] |= a->data[cur];
+                    r->data[0] = a->data[cur];
 
                     const auto gt = *r >= *b;
-                    auto gtb = integer{0};
-                    gtb.data[0] = gt;
-                    gtb *= ~0ULL;
 
-                    *r -= (*b & gtb);
+                    auto gtb = integer{};
+                    gtb.data[0] = gt;
+
+                    *r -= (*b & -gtb);
                     q->data[cur] = gt;
                 }
             };
@@ -193,14 +199,13 @@ namespace mutus {
             auto i1 = ~*this & other;
             auto i2 = *this & ~other;
 
-            i1 |= i1 >> 1;
-            i1 |= i1 >> 2;
-            i1 |= i1 >> 4;
-            i1 |= i1 >> 8;
-            i1 |= i1 >> 16;
-            i1 |= i1 >> 32;
+            auto c_bit = false;
+            unroll_for _for{for_invoker{[](int cur, integer *_this, bool *c_bit) {
+                *c_bit |= (_this->data[cur] |= *c_bit);
+            }}};
+            _for.template impl<n - 1, -1, -1>().go(&i1, &c_bit);
 
-            return (i2 & ~i1) != integer{0};
+            return (i2 & ~i1) != integer{};
         }
 
         MUTUS_API bool operator>=(const integer& other) const {
@@ -260,6 +265,10 @@ namespace mutus {
             return b;
         }
 
+        MUTUS_API integer operator-() const {
+            return ~*this + 1;
+        }
+
         MUTUS_API integer operator+(const integer& b) const {
             integer c{};
             bool carry = false;
@@ -269,7 +278,7 @@ namespace mutus {
         }
 
         MUTUS_API integer operator-(const integer& b) const {
-            return *this + (~b + 1);
+            return *this + -b;
         }
 
         MUTUS_API integer operator*(const integer& b) const {
@@ -291,7 +300,7 @@ namespace mutus {
 
         MUTUS_API integer& operator<<=(int ref) {
             unroll_for<shl> _for{{}};
-            _for.template impl<n, -1, -1>().go(this->data, this->data, ref);
+            _for.template impl<n - 1, -1, -1>().go(this->data, this->data, ref);
             return *this;
         }
 
@@ -302,7 +311,7 @@ namespace mutus {
         }
 
         MUTUS_API integer& operator-=(const integer& b) {
-            return (*this += (~b + 1));
+            return (*this += -b);
         }
 
         MUTUS_API integer& operator+=(const integer& b) {
